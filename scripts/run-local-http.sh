@@ -35,6 +35,9 @@ case $1 in
 "stop")
   stop
   ;;
+"start")
+  start
+  ;;
 "restart")
   stop
   start

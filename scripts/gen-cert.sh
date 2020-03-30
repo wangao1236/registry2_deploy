@@ -1,14 +1,28 @@
 #!/bin/bash
 
-PWD=$(pwd)
+function import() {
+  PWD=$(pwd)
+  RETURN=$PWD
+  SCRIPTS_HOME=$PWD/scripts
+  echo "import registry-config.sh"
+  cd "$SCRIPTS_HOME" || exit
+  . ./registry-config.sh
+  cd "$RETURN" || exit
+}
 
+import
+
+PWD=$(pwd)
 CERT_HOME=$PWD/certs
 
-mkdir -p $CERT_HOME
+echo "generate CA & cert & key"
+mkdir -p "$CERT_HOME"
+cd "$CERT_HOME" || exit
 
-cd $CERT_HOME
+rm -rf *
 
-
+mkdir -p server
+mkdir -p client
 
 cat >ca-config.json <<EOF
 {
@@ -17,7 +31,7 @@ cat >ca-config.json <<EOF
       "expiry": "87600h"
     },
     "profiles": {
-      "tke": {
+      "registry": {
         "usages": [
             "signing",
             "key encipherment",
@@ -33,7 +47,7 @@ EOF
 
 cat >ca-csr.json <<EOF
 {
-  "CN": "tke",
+  "CN": "registry",
   "key": {
     "algo": "rsa",
     "size": 2048
@@ -56,17 +70,12 @@ cfssl gencert -initca ca-csr.json | cfssljson -bare ca -
 
 echo "generate client cert"
 
-cat >admin-csr.json <<EOF
+cd client || exit
+
+cat >client-csr.json <<EOF
 {
-  "CN": "admin",
-  "hosts": [
-    "localhost",
-    "127.0.0.1",
-    "10.0.2.15",
-    "192.168.1.67",
-    "master1",
-    "node1"
-  ],
+  "CN": "client",
+  "hosts": [],
   "key": {
     "algo": "rsa",
     "size": 2048
@@ -74,63 +83,33 @@ cat >admin-csr.json <<EOF
   "names": [
     {
       "C": "CN",
-      "ST": "Shenzhen",
-      "L": "Guangdong",
-      "O": "system:masters",
+      "ST": "Beijing",
+      "L": "Beijing",
+      "O": "WangAo",
       "OU": "System"
     }
   ]
 }
 EOF
 
-cfssl gencert -ca=../ca.pem -ca-key=../ca-key.pem -config=../ca-config.json -profile=tke admin-csr.json | cfssljson -bare admin
+cfssl gencert -ca=../ca.pem -ca-key=../ca-key.pem -config=../ca-config.json -profile=registry client-csr.json | cfssljson -bare client
 
 cd ..
 
-#----------------------- tke
+#----------------------- server
 
-echo "generate tke cert"
+echo "generate server cert"
 
-cd tke
+cd server || exit
 
-cat >tke-csr.json <<EOF
+cat >server-csr.json <<EOF
 {
-  "CN": "tke",
+  "CN": "server",
   "hosts": [
-    "127.0.0.1",
-    "10.0.2.15",
-    "192.168.1.67",
     "localhost",
-    "master1",
-    "node1",
-    "tke-apiserver",
-    "tke-controller-manager",
-    "tke-console",
-    "tke-project",
-    "tke-auth",
-    "tke-webshell",
-    "tke-monitor",
-    "api.tke.com",
-    "dev.api.tke.com",
-    "stage.api.tke.com",
-    "console.tke.com",
-    "dev.console.tke.com",
-    "stage.console.tke.com",
-    "www.tke.com",
-    "dev.www.tke.com",
-    "stage.www.tke.com",
-    "auth.tke.com",
-    "dev.auth.tke.com",
-    "stage.auth.tke.com",
-    "project.tke.com",
-    "dev.project.tke.com",
-    "stage.project.tke.com",
-    "monitor.tke.com",
-    "dev.monitor.tke.com",
-    "stage.monitor.tke.com",
-    "webshell.tke.com",
-    "dev.webshell.tke.com",
-    "stage.webshell.tke.com"
+    "127.0.0.1",
+    "$REGISTRY_IP",
+    "$REGISTRY_ADDR"
   ],
   "key": {
     "algo": "rsa",
@@ -139,15 +118,15 @@ cat >tke-csr.json <<EOF
   "names": [
     {
       "C": "CN",
-      "ST": "Shenzhen",
-      "L": "Guangdong",
-      "O": "Tencent",
+      "ST": "Beijing",
+      "L": "Beijing",
+      "O": "WangAo",
       "OU": "System"
     }
   ]
 }
 EOF
 
-cfssl gencert -ca=../ca.pem -ca-key=../ca-key.pem -config=../ca-config.json -profile=tke tke-csr.json | cfssljson -bare tke
+cfssl gencert -ca=../ca.pem -ca-key=../ca-key.pem -config=../ca-config.json -profile=registry server-csr.json | cfssljson -bare server
 
 cd ..

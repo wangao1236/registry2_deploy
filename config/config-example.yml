@@ -1,0 +1,264 @@
+# 用于构建本地 registry 的配置文件
+version: 0.1
+# `log` 选项，配置日志系统的行为。日志系统将所有内容输出到 stdout。你可以使用此配置部分调整粒度和格式
+log:
+  # 在 `log` 中，`accesslog` 配置访问日志系统的行为。默认情况下，访问日志系统以组合日志格式输出到 stdout
+  # 可以通过将 `disabled` 设置为 true 来禁用访问日志记录
+  accesslog:
+    disabled: true
+  level: debug
+  formatter: text
+  fields:
+    service: registry
+    environment: staging
+  # `hosks` 选贤日志钩子的行为。本小节包括一系列理程序，例如，你可以使用它来发送邮件
+  # 请参阅 `loglevel` 配置打印的消息级别
+  hooks:
+    - type: mail
+      disabled: true
+      levels:
+        - panic
+      options:
+        smtp:
+          addr: mail.example.com:25
+          username: mailuser
+          password: password
+          insecure: true
+        from: sender@example.com
+        to:
+          - errors@example.com
+# 即将弃用: 使用 `log` 替代
+loglevel: debug
+# `storage` 选项是必需的，并定义使用哪个存储后端
+# 你必须正确配置一个且仅有一个后端。如果配置更多，注册表将返回一个错误
+# 你可以选择任何这些后端存储驱动程序
+storage:
+  filesystem:
+    rootdirectory: /var/lib/registry
+    maxthreads: 100
+  azure:
+    accountname: accountname
+    accountkey: base64encodedaccountkey
+    container: containername
+  gcs:
+    bucket: bucketname
+    keyfile: /path/to/keyfile
+    credentials:
+      type: service_account
+      project_id: project_id_string
+      private_key_id: private_key_id_string
+      private_key: private_key_string
+      client_email: client@example.com
+      client_id: client_id_string
+      auth_uri: http://example.com/auth_uri
+      token_uri: http://example.com/token_uri
+      auth_provider_x509_cert_url: http://example.com/provider_cert_url
+      client_x509_cert_url: http://example.com/client_cert_url
+    rootdirectory: /gcs/object/name/prefix
+    chunksize: 5242880
+  s3:
+    accesskey: awsaccesskey
+    secretkey: awssecretkey
+    region: us-west-1
+    regionendpoint: http://myobjects.local
+    bucket: bucketname
+    encrypt: true
+    keyid: mykeyid
+    secure: true
+    v4auth: true
+    chunksize: 5242880
+    multipartcopychunksize: 33554432
+    multipartcopymaxconcurrency: 100
+    multipartcopythresholdsize: 33554432
+    rootdirectory: /s3/object/name/prefix
+  swift:
+    username: username
+    password: password
+    authurl: https://storage.myprovider.com/auth/v1.0 or https://storage.myprovider.com/v2.0 or https://storage.myprovider.com/v3/auth
+    tenant: tenantname
+    tenantid: tenantid
+    domain: domain name for Openstack Identity v3 API
+    domainid: domain id for Openstack Identity v3 API
+    insecureskipverify: true
+    region: fr
+    container: containername
+    rootdirectory: /swift/object/name/prefix
+  oss:
+    accesskeyid: accesskeyid
+    accesskeysecret: accesskeysecret
+    region: OSS region name
+    endpoint: optional endpoints
+    internal: optional internal endpoint
+    bucket: OSS bucket
+    encrypt: optional enable server-side encryption
+    encryptionkeyid: optional KMS key id for encryption
+    secure: optional ssl setting
+    chunksize: optional size valye
+    rootdirectory: optional root directory
+  inmemory:  # This driver takes no parameters
+  delete:
+    enabled: false
+  redirect:
+    disable: false
+  cache:
+    blobdescriptor: redis
+  # 目前，上传清除 和 只读模式 是仅有可用的维护功能
+  maintenance:
+    # 上传清理 是一个后台进程，它定期从 registry 的上传目录中删除孤立的文件
+    # 默认情况下启用了 上传清除
+    uploadpurging:
+      enabled: true
+      age: 168h
+      interval: 24h
+      dryrun: false
+    # 如果 `readonly` 部分启用，则将不允许客户端向 registry 写入
+    # 此模式对于临时阻止对后端存储的写入非常有用，以便可以运行垃圾回收
+    # 在运行垃圾回收之前，registry 应该重新启动，`readonly`的 `enabled` 设置为 true
+    # 垃圾回收结束后，registry 可能会重新启动，这一次将 `readonly` 从配置中删除（或设置为 false）
+    readonly:
+      enabled: false
+auth:
+  silly:
+    realm: silly-realm
+    service: silly-service
+  token:
+    autoredirect: true
+    realm: token-realm
+    service: token-service
+    issuer: registry-token-issuer
+    rootcertbundle: /root/certs/bundle
+  htpasswd:
+    realm: basic-realm
+    path: /path/to/htpasswd
+middleware:
+  registry:
+    - name: ARegistryMiddleware
+      options:
+        foo: bar
+  repository:
+    - name: ARepositoryMiddleware
+      options:
+        foo: bar
+  storage:
+    - name: cloudfront
+      options:
+        baseurl: https://my.cloudfronted.domain.com/
+        privatekey: /path/to/pem
+        keypairid: cloudfrontkeypairid
+        duration: 3000s
+        ipfilteredby: awsregion
+        awsregion: us-east-1, use-east-2
+        updatefrequency: 12h
+        iprangesurl: https://ip-ranges.amazonaws.com/ip-ranges.json
+  storage:
+    - name: redirect
+      options:
+        baseurl: https://example.com/
+reporting:
+  bugsnag:
+    apikey: bugsnagapikey
+    releasestage: bugsnagreleasestage
+    endpoint: bugsnagendpoint
+  newrelic:
+    licensekey: newreliclicensekey
+    name: newrelicname
+    verbose: true
+# `http` 选项详细说明 registry 的 http 服务器的配置
+http:
+  addr: localhost:5000
+  prefix: /my/nested/registry/
+  host: https://myregistryaddress.org:5000
+  secret: asecretforlocaldevelopment
+  # 如果为 true，registry 将在 Location headers 中返回相对 URL
+  # 客户端负责解析正确的 URL
+  # 此选项与 docker 1.7 及更早版本不兼容
+  relativeurls: false
+  draintimeout: 60s
+  tls:
+    certificate: /path/to/x509/public
+    key: /path/to/x509/private
+    clientcas:
+      - /path/to/ca.pem
+      - /path/to/another/ca.pem
+    letsencrypt:
+      cachefile: /path/to/cache-file
+      email: emailused@letsencrypt.com
+      hosts: [myregistryaddress.org]
+  # `debug` 选项是可选的，使用它来配置可以帮助诊断问题的调试服务器
+  # 调试端点可用于监视 registry 指标和健康状况，以及概要分析
+  # 敏感信息可以通过调试端点获得。请确保在生产环境中锁定了对调试端点的访问。
+  # `debug` 选项使用一个必需的 `addr` 参数，该参数指定调试服务器应该接受连接的 `HOST:PORT`
+  debug:
+    addr: localhost:5001
+    prometheus:
+      enabled: true
+      path: /metrics
+  headers:
+    X-Content-Type-Options: [nosniff]
+  http2:
+    disabled: false
+notifications:
+  events:
+    includereferences: true
+  endpoints:
+    - name: alistener
+      disabled: false
+      url: https://my.listener.com/event
+      headers: <http.Header>
+      timeout: 1s
+      threshold: 10
+      backoff: 1s
+      ignoredmediatypes:
+        - application/octet-stream
+      ignore:
+        mediatypes:
+          - application/octet-stream
+        actions:
+          - pull
+redis:
+  addr: localhost:6379
+  password: asecret
+  db: 0
+  dialtimeout: 10ms
+  readtimeout: 10ms
+  writetimeout: 10ms
+  pool:
+    maxidle: 16
+    maxactive: 64
+    idletimeout: 300s
+health:
+  storagedriver:
+    enabled: true
+    interval: 10s
+    threshold: 3
+  file:
+    - file: /path/to/checked/file
+      interval: 10s
+  http:
+    - uri: http://server.to.check/must/return/200
+      headers:
+        Authorization: [Basic QWxhZGRpbjpvcGVuIHNlc2FtZQ==]
+      statuscode: 200
+      timeout: 3s
+      interval: 10s
+      threshold: 3
+  tcp:
+    - addr: redis-server.domain.com:6379
+      timeout: 3s
+      interval: 10s
+      threshold: 3
+proxy:
+  remoteurl: https://registry-1.docker.io
+  username: [username]
+  password: [password]
+compatibility:
+  schema1:
+    signingkeyfile: /etc/registry/key.json
+    enabled: true
+validation:
+  manifests:
+    urls:
+      allow:
+        - ^https?://([^/]+\.)*example\.com/
+      deny:
+        - ^https?://www\.example\.com/

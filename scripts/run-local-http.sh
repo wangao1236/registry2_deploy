@@ -1,6 +1,13 @@
 #!/bin/bash
 
-function import() {
+function gen_passwd() {
+  PWD=$(pwd)
+  AUTH_HOME=$PWD/auth
+  mkdir -p "$AUTH_HOME"
+  docker run --entrypoint htpasswd registry -Bbn $1 $2 > "$AUTH_HOME/htpasswd"
+}
+
+function init() {
   PWD=$(pwd)
   RETURN=$PWD
   SCRIPTS_HOME=$PWD/scripts
@@ -8,9 +15,10 @@ function import() {
   cd "$SCRIPTS_HOME" || exit
   . ./registry-config.sh
   cd "$RETURN" || exit
+  gen_passwd $REGISTRY_USERNAME $REGISTRY_PASSWORD
 }
 
-import
+init
 
 PWD=$(pwd)
 CONFIG_HOME=$PWD/config
@@ -27,7 +35,11 @@ function start() {
     -v "$BLOB_HOME":/blobs \
     --net="host" \
     --restart=always \
-    --name registry \
+    --name $REGISTRY_NAME \
+    -v "$AUTH_HOME:/auth" \
+    -e "REGISTRY_AUTH=htpasswd" \
+    -e "REGISTRY_AUTH_HTPASSWD_REALM=Registry Realm" \
+    -e REGISTRY_AUTH_HTPASSWD_PATH=/auth/htpasswd \
     registry:2
 }
 

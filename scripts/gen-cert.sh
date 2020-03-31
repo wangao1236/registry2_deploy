@@ -1,6 +1,6 @@
 #!/bin/bash
 
-function import() {
+function init() {
   PWD=$(pwd)
   RETURN=$PWD
   SCRIPTS_HOME=$PWD/scripts
@@ -10,7 +10,7 @@ function import() {
   cd "$RETURN" || exit
 }
 
-import
+init
 
 PWD=$(pwd)
 CERT_HOME=$PWD/certs

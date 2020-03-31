@@ -4,7 +4,7 @@ function gen_passwd() {
   PWD=$(pwd)
   AUTH_HOME=$PWD/auth
   mkdir -p "$AUTH_HOME"
-  docker run --entrypoint htpasswd registry -Bbn $1 $2 > "$AUTH_HOME/htpasswd"
+  docker run --entrypoint htpasswd registry:2 -Bbn $1 $2 > "$AUTH_HOME/htpasswd"
 }
 
 function init() {
